@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fogleman/primitive/primitive"
+	"./primitive"
 	"github.com/nfnt/resize"
 )
 
@@ -154,8 +154,15 @@ func main() {
 
 	// run algorithm
 	model := primitive.NewModel(input, bg, OutputSize, Workers)
-	primitive.Log(1, "%d: t=%.3f, score=%.6f\n", 0, 0.0, model.Score)
+
 	start := time.Now()
+	primitive.CreateTargetMemoizations(model)// create memoization for current and target
+	primitive.CreateCurrentMemoizations(model)// create memoization for current and target
+	elapsed := time.Since(start).Seconds()
+	primitive.MyComputeCost += elapsed
+
+	primitive.Log(1, "%d: t=%.3f, score=%.6f\n", 0, 0.0, model.Score)
+	start = time.Now()
 	frame := 0
 	for j, config := range Configs {
 		primitive.Log(1, "count=%d, mode=%d, alpha=%d, repeat=%d\n",
@@ -201,4 +208,12 @@ func main() {
 			}
 		}
 	}
+
+	wn := len(model.Workers)
+	print(fmt.Sprintf("TotalTimeComputeColor: %.4f\n", primitive.TotalTimeComputeColor/float64(wn)))
+	print(fmt.Sprintf("TotalTimeMyComputeColor: %.4f\n", primitive.TotalTimeMyComputeColor/float64(wn)))
+	print(fmt.Sprintf("MyComputeCost: %.4f\n", primitive.MyComputeCost/float64(wn)))
+	print(fmt.Sprintf("TotalTimePartialDifference: %.4f\n", primitive.TotalTimePartialDifference/float64(wn)))
+	print(fmt.Sprintf("TotalTimeMyPartialDifference: %.4f\n", primitive.TotalTimeMyPartialDifference/float64(wn)))
+	print(fmt.Sprintf("ComputeColorCount: %d\n", primitive.ComputeColorCount))
 }

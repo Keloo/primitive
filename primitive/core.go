@@ -3,9 +3,62 @@ package primitive
 import (
 	"image"
 	"math"
+	"time"
 )
 
+func myComputeColor(target, current *image.RGBA, lines []Scanline, alpha int) Color {
+	start := time.Now()
+
+	var rsum, gsum, bsum, count int64
+	a := 0x101 * 255 / alpha
+	for _, line := range lines {
+		tr := TargetMemo[line.Y][line.X2][0]
+		tg := TargetMemo[line.Y][line.X2][1]
+		tb := TargetMemo[line.Y][line.X2][2]
+		if line.X1 > 0 {
+			tr -= TargetMemo[line.Y][line.X1-1][0]
+			tg -= TargetMemo[line.Y][line.X1-1][1]
+			tb -= TargetMemo[line.Y][line.X1-1][2]
+		}
+		cr := CurrentMemo[line.Y][line.X2][0]
+		cg := CurrentMemo[line.Y][line.X2][1]
+		cb := CurrentMemo[line.Y][line.X2][2]
+		if line.X1 > 0 {
+			cr -= CurrentMemo[line.Y][line.X1-1][0]
+			cg -= CurrentMemo[line.Y][line.X1-1][1]
+			cb -= CurrentMemo[line.Y][line.X1-1][2]
+		}
+
+		rsum += int64((tr-cr)*int64(a) + cr*0x101)
+		gsum += int64((tg-cg)*int64(a) + cg*0x101)
+		bsum += int64((tb-cb)*int64(a) + cb*0x101)
+		count += int64(line.X2-line.X1)+1
+	}
+	if count == 0 {
+		return Color{}
+	}
+	r := clampInt(int(rsum/count)>>8, 0, 255)
+	g := clampInt(int(gsum/count)>>8, 0, 255)
+	b := clampInt(int(bsum/count)>>8, 0, 255)
+
+	elapsed := time.Since(start).Seconds()
+	TotalTimeMyComputeColor += elapsed
+	ComputeColorCount++
+
+	return Color{r, g, b, alpha}
+}
+
 func computeColor(target, current *image.RGBA, lines []Scanline, alpha int) Color {
+	start := time.Now()
+
+	myResult := myComputeColor(target, current, lines, alpha)
+	elapsed := time.Since(start).Seconds()
+	TotalTimeMyComputeColor += elapsed
+
+	return myResult
+
+	start = time.Now()
+
 	var rsum, gsum, bsum, count int64
 	a := 0x101 * 255 / alpha
 	for _, line := range lines {
@@ -30,7 +83,18 @@ func computeColor(target, current *image.RGBA, lines []Scanline, alpha int) Colo
 	r := clampInt(int(rsum/count)>>8, 0, 255)
 	g := clampInt(int(gsum/count)>>8, 0, 255)
 	b := clampInt(int(bsum/count)>>8, 0, 255)
-	return Color{r, g, b, alpha}
+
+	elapsed = time.Since(start).Seconds()
+	TotalTimeComputeColor += elapsed
+	ComputeColorCount++
+
+	result :=  Color{r, g, b, alpha}
+
+	if result != myResult {
+		print("jora pizdetz caroci")
+	}
+
+	return result
 }
 
 func copyLines(dst, src *image.RGBA, lines []Scanline) {
@@ -88,7 +152,65 @@ func differenceFull(a, b *image.RGBA) float64 {
 	return math.Sqrt(float64(total)/float64(w*h*4)) / 255
 }
 
+func myDifferencePartial(target, before, after *image.RGBA, score float64, lines []Scanline) float64 {
+	size := target.Bounds().Size()
+	w, h := size.X, size.Y
+	total := uint64(math.Pow(score*255, 2) * float64(w*h*4))
+
+	ai := after.PixOffset(lines[0].X1, lines[0].Y)
+	ar := int64(after.Pix[ai])
+	ag := int64(after.Pix[ai+1])
+	ab := int64(after.Pix[ai+2])
+	//aa := int64(after.Pix[ai+3])
+
+	for _, line := range lines {
+		n := int64(line.X2 - line.X1 + 1)
+
+		tar := TargetMemo[line.Y][line.X2][0]
+		tag := TargetMemo[line.Y][line.X2][1]
+		tab := TargetMemo[line.Y][line.X2][2]
+		tbr := CurrentTargetMemo[line.Y][line.X2][0]
+		tbg := CurrentTargetMemo[line.Y][line.X2][1]
+		tbb := CurrentTargetMemo[line.Y][line.X2][2]
+		bsr := CurrentSquaredMemo[line.Y][line.X2][0]
+		bsg := CurrentSquaredMemo[line.Y][line.X2][1]
+		bsb := CurrentSquaredMemo[line.Y][line.X2][2]
+
+		if line.X1 > 0 {
+			tar -= TargetMemo[line.Y][line.X1-1][0]
+			tag -= TargetMemo[line.Y][line.X1-1][1]
+			tab -= TargetMemo[line.Y][line.X1-1][2]
+			tbr -= CurrentTargetMemo[line.Y][line.X1-1][0]
+			tbg -= CurrentTargetMemo[line.Y][line.X1-1][1]
+			tbb -= CurrentTargetMemo[line.Y][line.X1-1][2]
+			bsr -= CurrentSquaredMemo[line.Y][line.X1-1][0]
+			bsg -= CurrentSquaredMemo[line.Y][line.X1-1][1]
+			bsb -= CurrentSquaredMemo[line.Y][line.X1-1][2]
+		}
+
+		TA := tar * ar + tag * ag + tab * ab
+		As := (ar*ar + ab*ab + ag*ag) * n
+		TB := tbr + tbg + tbb
+		Bs := bsr + bsg + bsb
+
+		total = uint64(int64(total) - 2 * TA + 2 * TB + As - Bs)
+	}
+
+	result := math.Sqrt(float64(total)/float64(w*h*4)) / 255
+
+	return result
+}
+
 func differencePartial(target, before, after *image.RGBA, score float64, lines []Scanline) float64 {
+	start := time.Now()
+
+	myResult := myDifferencePartial(target, before, after, score, lines)
+	elapsed := time.Since(start).Seconds()
+	TotalTimeMyPartialDifference += elapsed
+	return myResult
+
+	start = time.Now()
+
 	size := target.Bounds().Size()
 	w, h := size.X, size.Y
 	total := uint64(math.Pow(score*255, 2) * float64(w*h*4))
@@ -120,5 +242,19 @@ func differencePartial(target, before, after *image.RGBA, score float64, lines [
 			total += uint64(dr2*dr2 + dg2*dg2 + db2*db2 + da2*da2)
 		}
 	}
-	return math.Sqrt(float64(total)/float64(w*h*4)) / 255
+
+	elapsed = time.Since(start).Seconds()
+	TotalTimePartialDifference += elapsed
+
+	result := math.Sqrt(float64(total)/float64(w*h*4)) / 255
+
+	if result != myResult {
+		//println("jora tu shi ai ahrenit")
+		//println(result)
+		//println(myResult)
+		//println("")
+		//os.Exit(1)
+	}
+
+	return result
 }
