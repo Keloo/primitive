@@ -1,17 +1,9 @@
 package primitive
 
-var TotalTimeComputeColor = 0.0
-var TotalTimeMyComputeColor = 0.0
-var TotalTimePartialDifference = 0.0
-var TotalTimeMyPartialDifference = 0.0
-var ComputeColorCount = 0
-var MyComputeCost = 0.0
-
 const SIZE = 2048
 // [][][0] - R, [][][1] - G, [][][2] - B
 var CurrentMemo [SIZE][SIZE][3]int64
 var TargetMemo [SIZE][SIZE][3]int64
-var TargetSquaredMemo [SIZE][SIZE][3]int64
 var CurrentSquaredMemo [SIZE][SIZE][3]int64
 var CurrentTargetMemo [SIZE][SIZE][3]int64
 
@@ -78,16 +70,10 @@ func CreateTargetMemoizations(model *Model) {
 			TargetMemo[i][j][0] = int64(R)
 			TargetMemo[i][j][1] = int64(G)
 			TargetMemo[i][j][2] = int64(B)
-			TargetSquaredMemo[i][j][0] = int64(R)*int64(R)
-			TargetSquaredMemo[i][j][1] = int64(G)*int64(G)
-			TargetSquaredMemo[i][j][2] = int64(B)*int64(B)
 			if j > 0 {
 				TargetMemo[i][j][0] += TargetMemo[i][j-1][0]
 				TargetMemo[i][j][1] += TargetMemo[i][j-1][1]
 				TargetMemo[i][j][2] += TargetMemo[i][j-1][2]
-				TargetSquaredMemo[i][j][0] += TargetSquaredMemo[i][j-1][0]
-				TargetSquaredMemo[i][j][1] += TargetSquaredMemo[i][j-1][1]
-				TargetSquaredMemo[i][j][2] += TargetSquaredMemo[i][j-1][2]
 			}
 			idx += 4
 		}

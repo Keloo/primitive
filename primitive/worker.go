@@ -50,7 +50,7 @@ func (worker *Worker) Energy(shape Shape, alpha int) float64 {
 	color := computeColor(worker.Target, worker.Current, lines, alpha)
 	copyLines(worker.Buffer, worker.Current, lines)
 	drawLines(worker.Buffer, color, lines)
-	return differencePartial(worker.Target, worker.Current, worker.Buffer, worker.Score, lines)
+	return myDifferencePartial(worker.Target, worker.Current, worker.Buffer, worker.Score, lines)
 }
 
 func (worker *Worker) BestHillClimbState(t ShapeType, a, n, age, m int) *State {

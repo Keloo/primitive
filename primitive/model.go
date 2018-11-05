@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/fogleman/gg"
-	"time"
 )
 
 type Model struct {
@@ -106,7 +105,7 @@ func (model *Model) Add(shape Shape, alpha int) {
 	lines := shape.Rasterize()
 	color := computeColor(model.Target, model.Current, lines, alpha)
 	drawLines(model.Current, color, lines)
-	score := differencePartial(model.Target, before, model.Current, model.Score, lines)
+	score := myDifferencePartial(model.Target, before, model.Current, model.Score, lines)
 
 	model.Score = score
 	model.Shapes = append(model.Shapes, shape)
@@ -122,10 +121,7 @@ func (model *Model) Step(shapeType ShapeType, alpha, repeat int) int {
 	// state = HillClimb(state, 1000).(*State)
 	model.Add(state.Shape, state.Alpha)
 
-	start := time.Now()
 	CreateCurrentMemoizations(model)
-	elapsed := time.Since(start).Seconds()
-	MyComputeCost += elapsed
 
 	for i := 0; i < repeat; i++ {
 		state.Worker.Init(model.Current, model.Score)
