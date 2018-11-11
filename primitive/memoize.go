@@ -1,5 +1,7 @@
 package primitive
 
+var MemoTime = 0.0
+
 const SIZE = 2048
 // [][][0] - R, [][][1] - G, [][][2] - B
 var CurrentMemo [SIZE][SIZE][3]int64

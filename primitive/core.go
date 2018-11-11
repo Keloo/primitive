@@ -7,20 +7,23 @@ import (
 
 func myComputeColor(target, current *image.RGBA, lines []Scanline, alpha int) Color {
 	var rsum, gsum, bsum, count int64
+
 	a := 0x101 * 255 / alpha
+
 	for _, line := range lines {
 		tr := TargetMemo[line.Y][line.X2][0]
 		tg := TargetMemo[line.Y][line.X2][1]
 		tb := TargetMemo[line.Y][line.X2][2]
+
+		cr := CurrentMemo[line.Y][line.X2][0]
+		cg := CurrentMemo[line.Y][line.X2][1]
+		cb := CurrentMemo[line.Y][line.X2][2]
+
 		if line.X1 > 0 {
 			tr -= TargetMemo[line.Y][line.X1-1][0]
 			tg -= TargetMemo[line.Y][line.X1-1][1]
 			tb -= TargetMemo[line.Y][line.X1-1][2]
-		}
-		cr := CurrentMemo[line.Y][line.X2][0]
-		cg := CurrentMemo[line.Y][line.X2][1]
-		cb := CurrentMemo[line.Y][line.X2][2]
-		if line.X1 > 0 {
+
 			cr -= CurrentMemo[line.Y][line.X1-1][0]
 			cg -= CurrentMemo[line.Y][line.X1-1][1]
 			cb -= CurrentMemo[line.Y][line.X1-1][2]
@@ -31,9 +34,11 @@ func myComputeColor(target, current *image.RGBA, lines []Scanline, alpha int) Co
 		bsum += int64((tb-cb)*int64(a) + cb*0x101)
 		count += int64(line.X2-line.X1)+1
 	}
+
 	if count == 0 {
 		return Color{}
 	}
+
 	r := clampInt(int(rsum/count)>>8, 0, 255)
 	g := clampInt(int(gsum/count)>>8, 0, 255)
 	b := clampInt(int(bsum/count)>>8, 0, 255)

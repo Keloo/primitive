@@ -14,6 +14,7 @@ import (
 
 	"./primitive"
 	"github.com/nfnt/resize"
+	"github.com/pkg/profile"
 )
 
 var (
@@ -89,6 +90,7 @@ func check(err error) {
 }
 
 func main() {
+	defer profile.Start().Stop()
 	// parse and validate arguments
 	flag.Parse()
 	ok := true
@@ -133,6 +135,8 @@ func main() {
 		Workers = runtime.NumCPU()
 	}
 
+	primitive.Log(1, "Memoized version\n")
+
 	// read input image
 	primitive.Log(1, "reading %s\n", Input)
 	input, err := primitive.LoadImage(Input)
@@ -158,7 +162,6 @@ func main() {
 	primitive.CreateTargetMemoizations(model)// create memoization for current and target
 	primitive.CreateCurrentMemoizations(model)// create memoization for current and target
 
-	primitive.Log(1, "My version")
 	primitive.Log(1, "%d: t=%.3f, score=%.6f\n", 0, 0.0, model.Score)
 
 	start := time.Now()
@@ -207,4 +210,6 @@ func main() {
 			}
 		}
 	}
+
+	log.Printf("MemoTime: %s", primitive.MemoTime)
 }

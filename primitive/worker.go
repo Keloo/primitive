@@ -47,7 +47,7 @@ func (worker *Worker) Energy(shape Shape, alpha int) float64 {
 	worker.Counter++
 	lines := shape.Rasterize()
 	// worker.Heatmap.Add(lines)
-	color := computeColor(worker.Target, worker.Current, lines, alpha)
+	color := myComputeColor(worker.Target, worker.Current, lines, alpha)
 	copyLines(worker.Buffer, worker.Current, lines)
 	drawLines(worker.Buffer, color, lines)
 	return myDifferencePartial(worker.Target, worker.Current, worker.Buffer, worker.Score, lines)
